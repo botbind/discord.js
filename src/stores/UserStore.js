@@ -1,25 +1,18 @@
 'use strict';
 
-const BaseManager = require('./BaseManager');
+const DataStore = require('./DataStore');
 const User = require('../structures/User');
 const GuildMember = require('../structures/GuildMember');
 const Message = require('../structures/Message');
 
 /**
- * Manages API methods for users and stores their cache.
- * @extends {BaseManager}
+ * A data store to store User models.
+ * @extends {DataStore}
  */
-class UserManager extends BaseManager {
+class UserStore extends DataStore {
   constructor(client, iterable) {
     super(client, iterable, User);
   }
-
-  /**
-   * The cache of this manager
-   * @property {Collection<Snowflake, User>} cache
-   * @memberof UserManager
-   * @instance
-   */
 
   /**
    * Data that resolves to give a User object. This can be:
@@ -59,11 +52,11 @@ class UserManager extends BaseManager {
    * @returns {Promise<User>}
    */
   async fetch(id, cache = true) {
-    const existing = this.cache.get(id);
+    const existing = this.get(id);
     if (existing && !existing.partial) return existing;
     const data = await this.client.api.users(id).get();
     return this.add(data, cache);
   }
 }
 
-module.exports = UserManager;
+module.exports = UserStore;

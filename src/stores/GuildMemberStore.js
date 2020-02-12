@@ -1,31 +1,20 @@
 'use strict';
 
-const BaseManager = require('./BaseManager');
+const DataStore = require('./DataStore');
 const GuildMember = require('../structures/GuildMember');
 const { Events, OPCodes } = require('../util/Constants');
 const Collection = require('../util/Collection');
 const { Error, TypeError } = require('../errors');
 
 /**
- * Manages API methods for GuildMembers and stores their cache.
- * @extends {BaseManager}
+ * Stores guild members.
+ * @extends {DataStore}
  */
-class GuildMemberManager extends BaseManager {
+class GuildMemberStore extends DataStore {
   constructor(guild, iterable) {
     super(guild.client, iterable, GuildMember);
-    /**
-     * The guild this manager belongs to
-     * @type {Guild}
-     */
     this.guild = guild;
   }
-
-  /**
-   * The cache of this Manager
-   * @property {Collection<Snowflake, GuildMember>} cache
-   * @memberof GuildMemberManager
-   * @instance
-   */
 
   add(data, cache = true) {
     return super.add(data, cache, { id: data.user.id, extras: [this.guild] });
@@ -60,7 +49,7 @@ class GuildMemberManager extends BaseManager {
     const memberResolvable = super.resolveID(member);
     if (memberResolvable) return memberResolvable;
     const userResolvable = this.client.users.resolveID(member);
-    return this.cache.has(userResolvable) ? userResolvable : null;
+    return this.has(userResolvable) ? userResolvable : null;
   }
 
   /**
@@ -195,7 +184,7 @@ class GuildMemberManager extends BaseManager {
 
 
   _fetchSingle({ user, cache }) {
-    const existing = this.cache.get(user);
+    const existing = this.get(user);
     if (existing && !existing.partial) return Promise.resolve(existing);
     return this.client.api.guilds(this.guild.id).members(user).get()
       .then(data => this.add(data, cache));
@@ -203,8 +192,8 @@ class GuildMemberManager extends BaseManager {
 
   _fetchMany({ query = '', limit = 0 } = {}) {
     return new Promise((resolve, reject) => {
-      if (this.guild.memberCount === this.cache.size && !query && !limit) {
-        resolve(this.cache);
+      if (this.guild.memberCount === this.size && !query && !limit) {
+        resolve(this);
         return;
       }
       this.guild.shard.send({
@@ -222,11 +211,11 @@ class GuildMemberManager extends BaseManager {
         for (const member of members.values()) {
           if (query || limit) fetchedMembers.set(member.id, member);
         }
-        if (this.guild.memberCount <= this.cache.size ||
+        if (this.guild.memberCount <= this.size ||
           ((query || limit) && members.size < 1000) ||
           (limit && fetchedMembers.size >= limit)) {
           this.guild.client.removeListener(Events.GUILD_MEMBERS_CHUNK, handler);
-          resolve(query || limit ? fetchedMembers : this.cache);
+          resolve(query || limit ? fetchedMembers : this);
         }
       };
       const timeout = this.guild.client.setTimeout(() => {
@@ -238,4 +227,4 @@ class GuildMemberManager extends BaseManager {
   }
 }
 
-module.exports = GuildMemberManager;
+module.exports = GuildMemberStore;

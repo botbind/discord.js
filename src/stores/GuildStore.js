@@ -1,6 +1,6 @@
 'use strict';
 
-const BaseManager = require('./BaseManager');
+const DataStore = require('./DataStore');
 const DataResolver = require('../util/DataResolver');
 const { Events } = require('../util/Constants');
 const Guild = require('../structures/Guild');
@@ -9,20 +9,13 @@ const GuildMember = require('../structures/GuildMember');
 const Role = require('../structures/Role');
 
 /**
- * Manages API methods for Guilds and stores their cache.
- * @extends {BaseManager}
+ * Stores guilds.
+ * @extends {DataStore}
  */
-class GuildManager extends BaseManager {
+class GuildStore extends DataStore {
   constructor(client, iterable) {
     super(client, iterable, Guild);
   }
-
-  /**
-   * The cache of this Manager
-   * @property {Collection<Snowflake, Guild>} cache
-   * @memberof GuildManager
-   * @instance
-   */
 
   /**
    * Data that resolves to give a Guild object. This can be:
@@ -36,7 +29,7 @@ class GuildManager extends BaseManager {
   /**
    * Resolves a GuildResolvable to a Guild object.
    * @method resolve
-   * @memberof GuildManager
+   * @memberof GuildStore
    * @instance
    * @param {GuildResolvable} guild The guild resolvable to identify
    * @returns {?Guild}
@@ -51,7 +44,7 @@ class GuildManager extends BaseManager {
   /**
    * Resolves a GuildResolvable to a Guild ID string.
    * @method resolveID
-   * @memberof GuildManager
+   * @memberof GuildStore
    * @instance
    * @param {GuildResolvable} guild The guild resolvable to identify
    * @returns {?Snowflake}
@@ -77,7 +70,7 @@ class GuildManager extends BaseManager {
       return new Promise((resolve, reject) =>
         this.client.api.guilds.post({ data: { name, region, icon } })
           .then(data => {
-            if (this.client.guilds.cache.has(data.id)) return resolve(this.client.guilds.cache.get(data.id));
+            if (this.client.guilds.has(data.id)) return resolve(this.client.guilds.get(data.id));
 
             const handleGuild = guild => {
               if (guild.id === data.id) {
@@ -102,4 +95,4 @@ class GuildManager extends BaseManager {
   }
 }
 
-module.exports = GuildManager;
+module.exports = GuildStore;

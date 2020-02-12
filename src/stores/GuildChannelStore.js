@@ -1,36 +1,24 @@
 'use strict';
 
 const { ChannelTypes } = require('../util/Constants');
-const BaseManager = require('./BaseManager');
+const DataStore = require('./DataStore');
 const GuildChannel = require('../structures/GuildChannel');
 const PermissionOverwrites = require('../structures/PermissionOverwrites');
 
 /**
- * Manages API methods for GuildChannels and stores their cache.
- * @extends {BaseManager}
+ * Stores guild channels.
+ * @extends {DataStore}
  */
-class GuildChannelManager extends BaseManager {
+class GuildChannelStore extends DataStore {
   constructor(guild, iterable) {
     super(guild.client, iterable, GuildChannel);
-
-    /**
-     * The guild this Manager belongs to
-     * @type {Guild}
-     */
     this.guild = guild;
   }
 
-  /**
-   * The cache of this Manager
-   * @property {Collection<Snowflake, GuildChannel>} cache
-   * @memberof GuildChannelManager
-   * @instance
-   */
-
   add(channel) {
-    const existing = this.cache.get(channel.id);
+    const existing = this.get(channel.id);
     if (existing) return existing;
-    this.cache.set(channel.id, channel);
+    this.set(channel.id, channel);
     return channel;
   }
 
@@ -44,7 +32,7 @@ class GuildChannelManager extends BaseManager {
   /**
    * Resolves a GuildChannelResolvable to a Channel object.
    * @method resolve
-   * @memberof GuildChannelManager
+   * @memberof GuildChannelStore
    * @instance
    * @param {GuildChannelResolvable} channel The GuildChannel resolvable to resolve
    * @returns {?Channel}
@@ -53,7 +41,7 @@ class GuildChannelManager extends BaseManager {
   /**
    * Resolves a GuildChannelResolvable to a channel ID string.
    * @method resolveID
-   * @memberof GuildChannelManager
+   * @memberof GuildChannelStore
    * @instance
    * @param {GuildChannelResolvable} channel The GuildChannel resolvable to resolve
    * @returns {?Snowflake}
@@ -129,4 +117,4 @@ class GuildChannelManager extends BaseManager {
   }
 }
 
-module.exports = GuildChannelManager;
+module.exports = GuildChannelStore;

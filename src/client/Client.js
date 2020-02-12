@@ -11,10 +11,10 @@ const Webhook = require('../structures/Webhook');
 const Invite = require('../structures/Invite');
 const ClientApplication = require('../structures/ClientApplication');
 const ShardClientUtil = require('../sharding/ShardClientUtil');
-const UserManager = require('../managers/UserManager');
-const ChannelManager = require('../managers/ChannelManager');
-const GuildManager = require('../managers/GuildManager');
-const GuildEmojiManager = require('../managers/GuildEmojiManager');
+const UserStore = require('../stores/UserStore');
+const ChannelStore = require('../stores/ChannelStore');
+const GuildStore = require('../stores/GuildStore');
+const GuildEmojiStore = require('../stores/GuildEmojiStore');
 const { Events, browser, DefaultOptions } = require('../util/Constants');
 const DataResolver = require('../util/DataResolver');
 const Structures = require('../util/Structures');
@@ -99,25 +99,25 @@ class Client extends BaseClient {
 
     /**
      * All of the {@link User} objects that have been cached at any point, mapped by their IDs
-     * @type {UserManager}
+     * @type {UserStore<Snowflake, User>}
      */
-    this.users = new UserManager(this);
+    this.users = new UserStore(this);
 
     /**
      * All of the guilds the client is currently handling, mapped by their IDs -
      * as long as sharding isn't being used, this will be *every* guild the bot is a member of
-     * @type {GuildManager}
+     * @type {GuildStore<Snowflake, Guild>}
      */
-    this.guilds = new GuildManager(this);
+    this.guilds = new GuildStore(this);
 
     /**
      * All of the {@link Channel}s that the client is currently handling, mapped by their IDs -
      * as long as sharding isn't being used, this will be *every* channel in *every* guild the bot
      * is a member of. Note that DM channels will not be initially cached, and thus not be present
-     * in the Manager without their explicit fetching or use.
-     * @type {ChannelManager}
+     * in the store without their explicit fetching or use.
+     * @type {ChannelStore<Snowflake, Channel>}
      */
-    this.channels = new ChannelManager(this);
+    this.channels = new ChannelStore(this);
 
     const ClientPresence = Structures.get('ClientPresence');
     /**
@@ -159,13 +159,13 @@ class Client extends BaseClient {
 
   /**
    * All custom emojis that the client has access to, mapped by their IDs
-   * @type {GuildEmojiManager}
+   * @type {GuildEmojiStore<Snowflake, GuildEmoji>}
    * @readonly
    */
   get emojis() {
-    const emojis = new GuildEmojiManager({ client: this });
-    for (const guild of this.guilds.cache.values()) {
-      if (guild.available) for (const emoji of guild.emojis.cache.values()) emojis.cache.set(emoji.id, emoji);
+    const emojis = new GuildEmojiStore({ client: this });
+    for (const guild of this.guilds.values()) {
+      if (guild.available) for (const emoji of guild.emojis.values()) emojis.set(emoji.id, emoji);
     }
     return emojis;
   }
@@ -298,11 +298,11 @@ class Client extends BaseClient {
     let channels = 0;
     let messages = 0;
 
-    for (const channel of this.channels.cache.values()) {
+    for (const channel of this.channels.values()) {
       if (!channel.messages) continue;
       channels++;
 
-      messages += channel.messages.cache.sweep(
+      messages += channel.messages.sweep(
         message => now - (message.editedTimestamp || message.createdTimestamp) > lifetimeMs
       );
     }

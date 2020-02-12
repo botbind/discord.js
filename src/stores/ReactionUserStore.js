@@ -1,29 +1,18 @@
 'use strict';
 
 const Collection = require('../util/Collection');
-const BaseManager = require('./BaseManager');
+const DataStore = require('./DataStore');
 const { Error } = require('../errors');
 
 /**
- * Manages API methods for users who reacted to a reaction and stores their cache.
- * @extends {BaseManager}
+ * A data store to store User models who reacted to a MessageReaction.
+ * @extends {DataStore}
  */
-class ReactionUserManager extends BaseManager {
+class ReactionUserStore extends DataStore {
   constructor(client, iterable, reaction) {
-    super(client, iterable, { name: 'User' });
-    /**
-     * The reaction that this manager belongs to
-     * @type {MessageReaction}
-     */
+    super(client, iterable, require('../structures/User'));
     this.reaction = reaction;
   }
-
-  /**
-   * The cache of this manager
-   * @property {Collection<Snowflake, User>} cache
-   * @memberof GuildManager
-   * @instance
-   */
 
   /**
    * Fetches all the users that gave this reaction. Resolves with a collection of users, mapped by their IDs.
@@ -41,7 +30,7 @@ class ReactionUserManager extends BaseManager {
     const users = new Collection();
     for (const rawUser of data) {
       const user = this.client.users.add(rawUser);
-      this.cache.set(user.id, user);
+      this.set(user.id, user);
       users.set(user.id, user);
     }
     return users;
@@ -63,4 +52,4 @@ class ReactionUserManager extends BaseManager {
   }
 }
 
-module.exports = ReactionUserManager;
+module.exports = ReactionUserStore;

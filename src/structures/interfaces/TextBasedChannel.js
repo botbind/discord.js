@@ -13,10 +13,10 @@ const APIMessage = require('../APIMessage');
 class TextBasedChannel {
   constructor() {
     /**
-     * A manager of the messages sent to this channel
-     * @type {MessageManager}
+     * A collection containing the messages sent to this channel
+     * @type {MessageStore<Snowflake, Message>}
      */
-    this.messages = new MessageManager(this);
+    this.messages = new MessageStore(this);
 
     /**
      * The ID of the last message in the channel, if one was sent
@@ -37,7 +37,7 @@ class TextBasedChannel {
    * @readonly
    */
   get lastMessage() {
-    return this.messages.cache.get(this.lastMessageID) || null;
+    return this.messages.get(this.lastMessageID) || null;
   }
 
   /**
@@ -350,4 +350,4 @@ class TextBasedChannel {
 module.exports = TextBasedChannel;
 
 // Fixes Circular
-const MessageManager = require('../../managers/MessageManager');
+const MessageStore = require('../../stores/MessageStore');

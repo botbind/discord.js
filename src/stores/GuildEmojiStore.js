@@ -1,32 +1,21 @@
 'use strict';
 
 const Collection = require('../util/Collection');
-const BaseManager = require('./BaseManager');
+const DataStore = require('./DataStore');
 const GuildEmoji = require('../structures/GuildEmoji');
 const ReactionEmoji = require('../structures/ReactionEmoji');
 const DataResolver = require('../util/DataResolver');
 const { TypeError } = require('../errors');
 
 /**
- * Manages API methods for GuildEmojis and stores their cache.
- * @extends {BaseManager}
+ * Stores guild emojis.
+ * @extends {DataStore}
  */
-class GuildEmojiManager extends BaseManager {
+class GuildEmojiStore extends DataStore {
   constructor(guild, iterable) {
     super(guild.client, iterable, GuildEmoji);
-    /**
-     * The guild this manager belongs to
-     * @type {Guild}
-     */
     this.guild = guild;
   }
-
-  /**
-  * The cache of GuildEmojis
-  * @property {Collection<Snowflake, GuildEmoji>} cache
-  * @memberof GuildEmojiManager
-  * @instance
-  */
 
   add(data, cache) {
     return super.add(data, cache, { extras: [this.guild] });
@@ -125,4 +114,4 @@ class GuildEmojiManager extends BaseManager {
   }
 }
 
-module.exports = GuildEmojiManager;
+module.exports = GuildEmojiStore;

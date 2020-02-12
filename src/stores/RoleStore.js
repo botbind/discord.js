@@ -1,30 +1,19 @@
 'use strict';
 
-const BaseManager = require('./BaseManager');
+const DataStore = require('./DataStore');
 const Role = require('../structures/Role');
 const { resolveColor } = require('../util/Util');
 const Permissions = require('../util/Permissions');
 
 /**
- * Manages API methods for roles and stores their cache.
- * @extends {BaseManager}
+ * Stores roles.
+ * @extends {DataStore}
  */
-class RoleManager extends BaseManager {
+class RoleStore extends DataStore {
   constructor(guild, iterable) {
     super(guild.client, iterable, Role);
-    /**
-     * The guild belonging to this manager
-     * @type {Guild}
-     */
     this.guild = guild;
   }
-
-  /**
-   * The role cache of this manager
-   * @property {Collection<Snowflake, Role>} cache
-   * @memberof RoleManager
-   * @instance
-   */
 
   add(data, cache) {
     return super.add(data, cache, { extras: [this.guild] });
@@ -34,11 +23,11 @@ class RoleManager extends BaseManager {
    * Obtains one or more roles from Discord, or the role cache if they're already available.
    * @param {Snowflake} [id] ID or IDs of the role(s)
    * @param {boolean} [cache=true] Whether to cache the new roles objects if it weren't already
-   * @returns {Promise<Role|RoleManager>}
+   * @returns {Promise<Role|Role[]>}
    * @example
    * // Fetch all roles from the guild
    * message.guild.roles.fetch()
-   *   .then(roles => console.log(`There are ${roles.cache.size} roles.`))
+   *   .then(roles => console.log(`There are ${roles.size} roles.`))
    *   .catch(console.error);
    * @example
    * // Fetch a single role
@@ -48,14 +37,14 @@ class RoleManager extends BaseManager {
    */
   async fetch(id, cache = true) {
     if (id) {
-      const existing = this.cache.get(id);
+      const existing = this.get(id);
       if (existing) return existing;
     }
 
     // We cannot fetch a single role, as of this commit's date, Discord API throws with 405
     const roles = await this.client.api.guilds(this.guild.id).roles.get();
     for (const role of roles) this.add(role, cache);
-    return id ? this.cache.get(id) || null : this;
+    return id ? this.get(id) || null : this;
   }
 
   /**
@@ -68,7 +57,7 @@ class RoleManager extends BaseManager {
   /**
    * Resolves a RoleResolvable to a Role object.
    * @method resolve
-   * @memberof RoleManager
+   * @memberof RoleStore
    * @instance
    * @param {RoleResolvable} role The role resolvable to resolve
    * @returns {?Role}
@@ -77,7 +66,7 @@ class RoleManager extends BaseManager {
   /**
    * Resolves a RoleResolvable to a role ID string.
    * @method resolveID
-   * @memberof RoleManager
+   * @memberof RoleStore
    * @instance
    * @param {RoleResolvable} role The role resolvable to resolve
    * @returns {?Snowflake}
@@ -127,17 +116,17 @@ class RoleManager extends BaseManager {
    * @readonly
    */
   get everyone() {
-    return this.cache.get(this.guild.id) || null;
+    return this.get(this.guild.id) || null;
   }
 
   /**
-   * The role with the highest position in the cache
+   * The role with the highest position in the store
    * @type {Role}
    * @readonly
    */
   get highest() {
-    return this.cache.reduce((prev, role) => role.comparePositionTo(prev) > 0 ? role : prev, this.cache.first());
+    return this.reduce((prev, role) => role.comparePositionTo(prev) > 0 ? role : prev, this.first());
   }
 }
 
-module.exports = RoleManager;
+module.exports = RoleStore;

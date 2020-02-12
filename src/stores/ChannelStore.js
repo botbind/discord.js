@@ -1,26 +1,59 @@
 'use strict';
 
+const DataStore = require('./DataStore');
 const Channel = require('../structures/Channel');
-const BaseManager = require('./BaseManager');
 const { Events } = require('../util/Constants');
 
+const kLru = Symbol('LRU');
+const lruable = ['dm'];
+
 /**
- * A manager of channels belonging to a client
+ * Stores channels.
+ * @extends {DataStore}
  */
-class ChannelManager extends BaseManager {
-  constructor(client, iterable) {
-    super(client, iterable, Channel);
+class ChannelStore extends DataStore {
+  constructor(client, iterableOrOptions = {}, options) {
+    if (!options && typeof iterableOrOptions[Symbol.iterator] !== 'function') {
+      options = iterableOrOptions;
+      iterableOrOptions = undefined;
+    }
+    super(client, iterableOrOptions, Channel);
+
+    if (options.lru) {
+      const lru = this[kLru] = [];
+      lru.add = item => {
+        lru.remove(item);
+        lru.unshift(item);
+        while (lru.length > options.lru) this.remove(lru[lru.length - 1]);
+      };
+      lru.remove = item => {
+        const index = lru.indexOf(item);
+        if (index > -1) lru.splice(index, 1);
+      };
+    }
   }
 
-  /**
-  * The cache of Channels
-  * @property {Collection<Snowflake, Channel>} cache
-  * @memberof ChannelManager
-  * @instance
-  */
+  get(key, peek = false) {
+    const item = super.get(key);
+    if (!item || !lruable.includes(item.type)) return item;
+    if (!peek && this[kLru]) this[kLru].add(key);
+    return item;
+  }
+
+  set(key, val) {
+    if (this[kLru] && lruable.includes(val.type)) this[kLru].add(key);
+    return super.set(key, val);
+  }
+
+  delete(key) {
+    const item = this.get(key, true);
+    if (!item) return false;
+    if (this[kLru] && lruable.includes(item.type)) this[kLru].remove(key);
+    return super.delete(key);
+  }
 
   add(data, guild, cache = true) {
-    const existing = this.cache.get(data.id);
+    const existing = this.get(data.id);
     if (existing) {
       if (existing._patch && cache) existing._patch(data);
       if (guild) guild.channels.add(existing);
@@ -34,15 +67,15 @@ class ChannelManager extends BaseManager {
       return null;
     }
 
-    if (cache) this.cache.set(channel.id, channel);
+    if (cache) this.set(channel.id, channel);
 
     return channel;
   }
 
   remove(id) {
-    const channel = this.cache.get(id);
-    if (channel.guild) channel.guild.channels.cache.delete(id);
-    this.cache.delete(id);
+    const channel = this.get(id);
+    if (channel.guild) channel.guild.channels.remove(id);
+    super.remove(id);
   }
 
   /**
@@ -55,7 +88,7 @@ class ChannelManager extends BaseManager {
   /**
    * Resolves a ChannelResolvable to a Channel object.
    * @method resolve
-   * @memberof ChannelManager
+   * @memberof ChannelStore
    * @instance
    * @param {ChannelResolvable} channel The channel resolvable to resolve
    * @returns {?Channel}
@@ -64,7 +97,7 @@ class ChannelManager extends BaseManager {
   /**
    * Resolves a ChannelResolvable to a channel ID string.
    * @method resolveID
-   * @memberof ChannelManager
+   * @memberof ChannelStore
    * @instance
    * @param {ChannelResolvable} channel The channel resolvable to resolve
    * @returns {?Snowflake}
@@ -82,7 +115,7 @@ class ChannelManager extends BaseManager {
    *   .catch(console.error);
    */
   async fetch(id, cache = true) {
-    const existing = this.cache.get(id);
+    const existing = this.get(id);
     if (existing && !existing.partial) return existing;
 
     const data = await this.client.api.channels(id).get();
@@ -90,4 +123,4 @@ class ChannelManager extends BaseManager {
   }
 }
 
-module.exports = ChannelManager;
+module.exports = ChannelStore;
